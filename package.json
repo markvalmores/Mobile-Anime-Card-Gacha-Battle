@@ -1,0 +1,43 @@
+{
+  "name": "anime-gacha-battle",
+  "version": "1.0.0",
+  "description": "Anime GIF Gacha Battle - Desktop Edition",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "vite",
+    "build": "vite build",
+    "build:win": "vite build && electron-builder --win portable"
+  },
+  "author": "Mark David Valmores",
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.anime.gacha.battle",
+    "productName": "AnimeGachaBattle",
+    "files": [
+      "dist/**/*",
+      "main.js",
+      "package.json"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": "icon.ico"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  },
+  "dependencies": {
+    "@google/genai": "^1.44.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1"
+  }
+}

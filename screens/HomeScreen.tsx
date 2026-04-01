@@ -226,15 +226,6 @@ pause
         >
           ?
         </button>
-        <button 
-          onClick={() => setShowExportModal(true)}
-          className="bg-slate-800 hover:bg-slate-700 text-white w-10 h-10 sm:w-12 sm:h-12 rounded-full font-black text-xl sm:text-2xl shadow-[0_0_15px_rgba(0,0,0,0.5)] border-2 border-slate-500 flex items-center justify-center transition-transform hover:scale-110 animate-pulse"
-          title="Export as EXE"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-          </svg>
-        </button>
       </div>
 
       <div className="relative z-10 h-full flex flex-col items-center justify-start sm:justify-center pt-24 sm:pt-20 overflow-y-auto pb-8">

@@ -49,7 +49,7 @@ export const BattleStage: React.FC<BattleStageProps> = ({ children, theme }) => 
         <div className="absolute bottom-[20%] w-full h-1 bg-white/20 blur-sm animate-pulse"></div>
 
         {/* Actors layer (Cards) - Re-enable pointer events for UI interaction */}
-        <div className="relative z-10 w-full max-w-5xl flex flex-col sm:flex-row justify-between items-center px-4 sm:px-12 pb-20 sm:pb-40 pointer-events-auto gap-8 sm:gap-0">
+        <div className="relative z-10 w-full max-w-5xl flex flex-col-reverse sm:flex-row justify-between items-center px-4 sm:px-12 pb-20 sm:pb-40 pointer-events-auto gap-8 sm:gap-0">
           {children}
         </div>
       </div>

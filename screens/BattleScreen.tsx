@@ -41,6 +41,8 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ playerState, setPlay
   const [combatLog, setCombatLog] = useState<string[]>([]);
   const [turn, setTurn] = useState<'PLAYER' | 'ENEMY'>('PLAYER');
   
+  const [isShaking, setIsShaking] = useState<'PLAYER' | 'ENEMY' | null>(null);
+
   const playerCardRef = useRef<Combatant | null>(null);
   const enemyCardRef = useRef<Combatant | null>(null);
 
@@ -53,6 +55,14 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ playerState, setPlay
   const [victoryImageUrl, setVictoryImageUrl] = useState<string | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   const themes = ['forest', 'volcano', 'ice', 'space'] as const;
   const [stageTheme] = useState(themes[Math.floor(Math.random() * themes.length)]);
@@ -74,7 +84,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ playerState, setPlay
     return { ...card, skills: generateProceduralSkills(card.element, card.name) };
   };
 
-  const generateEnemyAsync = useCallback(async (playerChosenCard: CardData): Promise<Combatant> => {
+  const generateEnemyAsync = useCallback(async (): Promise<Combatant> => {
     const level = playerState.level;
     const rand = Math.random();
     let rarity = Rarity.N;
@@ -132,7 +142,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ playerState, setPlay
   }, [playerState.level]);
 
   const startGame = async (selectedCard: CardData) => {
-    const enemy = await generateEnemyAsync(selectedCard);
+    const enemy = await generateEnemyAsync();
     const readyCard = ensureSkills(selectedCard);
     
     setPlayerCard({ 
@@ -179,7 +189,9 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ playerState, setPlay
     const id = Date.now() + Math.random();
     setFloatingTexts(prev => [...prev, { id, text, target, color }]);
     setTimeout(() => {
-      setFloatingTexts(prev => prev.filter(t => t.id !== id));
+      if (isMounted.current) {
+        setFloatingTexts(prev => prev.filter(t => t.id !== id));
+      }
     }, 800);
   };
 
@@ -207,14 +219,29 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ playerState, setPlay
     let shieldMultiplier = 0;
     let newCooldown = 0;
     let isGuardingAction = false;
+    let isCrit = false;
+    let isMiss = false;
 
-    // Refined Multipliers (No massive 2.5x spikes, pacing is better)
+    // Critical Hit Chance (10%)
+    if (skill.type !== SkillType.DEFEND && Math.random() < 0.10) {
+      isCrit = true;
+    }
+
+    // Miss Chance (5%)
+    if (skill.type !== SkillType.DEFEND && Math.random() < 0.05) {
+      isMiss = true;
+    }
+
+    // Refined Multipliers
     switch (skill.type) {
       case SkillType.BASIC: dmgMultiplier = 1.0; break;
       case SkillType.HEAVY: dmgMultiplier = 1.5; newCooldown = 2; break;
       case SkillType.DEFEND: dmgMultiplier = 0; shieldMultiplier = 1.5; newCooldown = 2; isGuardingAction = true; break;
       case SkillType.ULTIMATE: dmgMultiplier = 2.0; shieldMultiplier = 0.5; newCooldown = 4; break;
     }
+
+    if (isCrit) dmgMultiplier *= 1.5;
+    if (isMiss) dmgMultiplier = 0;
 
     await sleep(50); // Dash
 
@@ -230,24 +257,40 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ playerState, setPlay
       dmg = calculateDamage(attacker.attack, defender.defense, finalDmgMultiplier);
       
       // STRICT, BALANCED ANTI-INSTANT-DEATH SYSTEM
-      // Forces matches to take multiple turns, avoiding rocket-tag balancing.
-      let maxDamageCap = defender.maxHp * 0.20; // Basic hits can never exceed 20%
-      if (skill.type === SkillType.HEAVY) maxDamageCap = defender.maxHp * 0.35; // Heavy max 35%
-      if (skill.type === SkillType.ULTIMATE) maxDamageCap = defender.maxHp * 0.50; // Ultimate max 50%
-      
+      let maxDamageCap = defender.maxHp * 0.25; 
+      if (skill.type === SkillType.HEAVY) maxDamageCap = defender.maxHp * 0.40; 
+      if (skill.type === SkillType.ULTIMATE) maxDamageCap = defender.maxHp * 0.60; 
+      if (isCrit) maxDamageCap *= 1.5;
+
       dmg = Math.min(dmg, Math.floor(maxDamageCap));
-      dmg = Math.max(1, dmg); // Always at least 1 damage
+      dmg = Math.max(1, dmg); 
       
       let textParams = { text: dmg.toString(), color: 'text-red-500' };
-      if (isTargetGuarding) textParams = { text: `${dmg} (GUARDED)`, color: 'text-blue-300' };
+      if (isCrit) textParams = { text: `CRITICAL! ${dmg}`, color: 'text-yellow-500 font-black' };
+      else if (isTargetGuarding) textParams = { text: `${dmg} (GUARDED)`, color: 'text-blue-300' };
       else if (elementMult > 1) textParams = { text: `${dmg} (WEAK!)`, color: 'text-yellow-400' };
       else if (elementMult < 1) textParams = { text: `${dmg} (RESIST)`, color: 'text-gray-400' };
 
       addFloatingText(textParams.text, targetSide, textParams.color);
-      addLog(`${attacker.name} uses [${skill.name}] for ${dmg} damage!`);
+      
+      const flavorTexts = [
+        `strikes with precision!`,
+        `unleashes a powerful blow!`,
+        `finds an opening!`,
+        `attacks with relentless fury!`
+      ];
+      const flavor = flavorTexts[Math.floor(Math.random() * flavorTexts.length)];
+      addLog(`${attacker.name} ${flavor} [${skill.name}] deals ${dmg} damage!`);
+      
+      // Trigger shake effect
+      setIsShaking(targetSide);
+      setTimeout(() => setIsShaking(null), 500);
+    } else if (isMiss) {
+      addFloatingText('MISS!', targetSide, 'text-gray-500');
+      addLog(`${attacker.name}'s [${skill.name}] completely missed!`);
     } else {
       addFloatingText('GUARD UP', actor, 'text-blue-400');
-      addLog(`${attacker.name} enters a defensive stance!`);
+      addLog(`${attacker.name} braces for impact with [${skill.name}]!`);
     }
 
     const nextAttackerCooldowns = { ...attacker.cooldowns };
@@ -314,7 +357,9 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ playerState, setPlay
     } else {
        if (isPlayer) {
          setTurn('ENEMY');
-         setTimeout(() => enemyAI(), 300);
+         setTimeout(() => {
+           if (isMounted.current) enemyAI();
+         }, 300);
        } else {
          setTurn('PLAYER');
        }
@@ -339,15 +384,18 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ playerState, setPlay
      // Adjust AI predictive check for lower multipliers
      const estimatedHeavyDmg = calculateDamage(currentEnemy.attack, currentPlayer.defense, 1.5 * elementMult * guardMult);
      
-     // Balanced & Smart AI Behavior
-     if (getSkill(SkillType.ULTIMATE) && Math.random() > 0.3) {
+     // Smarter AI Logic
+     if (getSkill(SkillType.ULTIMATE) && (hpPercent < 0.4 || Math.random() > 0.6)) {
         chosenSkill = getSkill(SkillType.ULTIMATE)!; 
      } 
-     else if (getSkill(SkillType.HEAVY) && (currentPlayer.isGuarding || currentPlayer.shield > 0 || estimatedHeavyDmg >= playerEffectiveHp)) {
+     else if (getSkill(SkillType.HEAVY) && (estimatedHeavyDmg >= playerEffectiveHp || Math.random() > 0.5)) {
         chosenSkill = getSkill(SkillType.HEAVY)!;
      } 
-     else if (hpPercent < 0.5 && currentEnemy.shield === 0 && getSkill(SkillType.DEFEND)) {
+     else if (hpPercent < 0.6 && currentEnemy.shield < (currentEnemy.maxHp * 0.2) && getSkill(SkillType.DEFEND)) {
         chosenSkill = getSkill(SkillType.DEFEND)!; 
+     }
+     else if (getSkill(SkillType.BASIC)) {
+        chosenSkill = getSkill(SkillType.BASIC)!;
      }
      else {
         chosenSkill = availableSkills[Math.floor(Math.random() * availableSkills.length)];
@@ -398,6 +446,8 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ playerState, setPlay
     
     setIsGeneratingImage(true);
     const url = await generateVictoryImage(playerCard.name, playerCard.element, playerCard.currentHp);
+    if (!isMounted.current) return;
+    
     if (url) {
       setVictoryImageUrl(url);
       setShowShareModal(true);
@@ -511,7 +561,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ playerState, setPlay
             element={playerCard?.element || ElementType.LIGHT}
           />
           
-          <div className={`relative transform-gpu will-change-transform ${isAnimating && turn === 'PLAYER' ? 'animate-[attackMoveRight_0.2s_ease-in-out]' : ''}`}>
+          <div className={`relative transform-gpu will-change-transform ${isAnimating && turn === 'PLAYER' ? 'animate-[attackMoveRight_0.2s_ease-in-out]' : ''} ${isShaking === 'PLAYER' ? 'animate-shake' : ''}`}>
              {playerCard && <Card card={playerCard} size="lg" className="shadow-[20px_20px_30px_rgba(0,0,0,0.8)]" />}
              
              {activeEffect?.target === 'PLAYER' && (
@@ -541,7 +591,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ playerState, setPlay
             element={enemyCard?.element || ElementType.DARK}
           />
           
-          <div className={`relative transform-gpu will-change-transform ${isAnimating && turn === 'ENEMY' ? 'animate-[attackMoveLeft_0.2s_ease-in-out]' : ''}`}>
+          <div className={`relative transform-gpu will-change-transform ${isAnimating && turn === 'ENEMY' ? 'animate-[attackMoveLeft_0.2s_ease-in-out]' : ''} ${isShaking === 'ENEMY' ? 'animate-shake' : ''}`}>
              {enemyCard && <Card card={enemyCard} size="lg" className="shadow-[-20px_20px_30px_rgba(0,0,0,0.8)] border-red-500" />}
              
              {activeEffect?.target === 'ENEMY' && (
@@ -564,15 +614,16 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ playerState, setPlay
            <button onClick={() => changeScreen(AppScreen.HOME)} className="pointer-events-auto bg-black/50 text-white px-4 py-2 rounded font-bold hover:bg-black/80 border border-white/20 backdrop-blur-md transform-gpu">FLEE</button>
         </div>
 
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 w-[90%] sm:w-[500px] bg-black/60 backdrop-blur-md border border-white/10 rounded-lg p-3 max-h-40 overflow-hidden pointer-events-auto transform-gpu">
-          {combatLog.map((log, i) => (
-            <div key={i} className={`text-xs sm:text-sm ${i === 0 ? 'text-white font-bold text-sm sm:text-base' : 'text-gray-400'} opacity-${100 - i*20}`}>{log}</div>
-          ))}
-        </div>
-
         {phase === 'FIGHT' && !vsFlashing && playerCard && (
-          <div className="p-6 bg-gradient-to-t from-black via-black/90 to-transparent pointer-events-auto animate-[fadeIn_0.2s_ease-out] transform-gpu">
-            <div className="text-center mb-4 text-white font-black tracking-widest uppercase text-2xl drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
+          <div className="p-4 sm:p-6 bg-gradient-to-t from-black via-black/90 to-transparent pointer-events-auto animate-[fadeIn_0.2s_ease-out] transform-gpu">
+            
+            <div className="max-w-2xl mx-auto mb-4 bg-black/40 backdrop-blur-sm border border-white/10 rounded-lg p-2 max-h-24 overflow-hidden">
+              {combatLog.map((log, i) => (
+                <div key={i} className={`text-[10px] sm:text-sm ${i === 0 ? 'text-white font-bold' : 'text-gray-400'} opacity-${100 - i*20}`}>{log}</div>
+              ))}
+            </div>
+
+            <div className="text-center mb-2 sm:mb-4 text-white font-black tracking-widest uppercase text-lg sm:text-2xl drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]">
                {turn === 'PLAYER' ? "YOUR TURN" : "ENEMY TURN"}
             </div>
             

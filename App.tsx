@@ -1,10 +1,58 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
 import { AppScreen, PlayerState } from './types';
 import { TitleScreen } from './screens/TitleScreen';
 import { HomeScreen } from './screens/HomeScreen';
 import { GachaScreen } from './screens/GachaScreen';
 import { DeckScreen } from './screens/DeckScreen';
 import { BattleScreen } from './screens/BattleScreen';
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("ErrorBoundary caught an error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="w-screen h-screen bg-slate-900 flex flex-col items-center justify-center p-8 text-center">
+          <h1 className="text-4xl font-black text-red-500 mb-4">SYSTEM CRASH!</h1>
+          <p className="text-gray-300 mb-8 max-w-md">
+            The anime multiverse encountered a critical anomaly. This usually happens when the browser runs out of memory or an AI service fails.
+          </p>
+          <div className="bg-black/50 p-4 rounded border border-red-500/30 mb-8 w-full max-w-lg overflow-auto max-h-40 text-left font-mono text-xs text-red-400">
+            {this.state.error?.toString()}
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-full font-bold transition-all transform hover:scale-105 active:scale-95 shadow-lg shadow-blue-500/20"
+          >
+            REBOOT SYSTEM
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 const defaultPlayerState: PlayerState = {
   credits: 1000,
@@ -76,41 +124,43 @@ const App: React.FC = () => {
   if (!isLoaded) return <div className="bg-black w-screen h-screen"></div>;
 
   return (
-    <div className="w-full h-full font-sans antialiased text-white overflow-hidden bg-black selection:bg-blue-500/30">
-      
-      <div className={currentScreen === AppScreen.TITLE ? 'w-full h-full' : 'hidden'}>
-        <TitleScreen onStart={() => changeScreen(AppScreen.HOME)} />
-      </div>
-      
-      <div className={currentScreen === AppScreen.HOME ? 'w-full h-full home-screen-container' : 'hidden'}>
-        <HomeScreen playerState={playerState} changeScreen={changeScreen} resetToTitle={resetToTitle} />
-      </div>
+    <ErrorBoundary>
+      <div className="w-full h-full font-sans antialiased text-white overflow-hidden bg-black selection:bg-blue-500/30">
+        
+        {currentScreen === AppScreen.TITLE && (
+          <TitleScreen onStart={() => changeScreen(AppScreen.HOME)} />
+        )}
+        
+        {currentScreen === AppScreen.HOME && (
+          <HomeScreen playerState={playerState} changeScreen={changeScreen} resetToTitle={resetToTitle} />
+        )}
 
-      <div className={currentScreen === AppScreen.GACHA ? 'w-full h-full' : 'hidden'}>
-        <GachaScreen 
-          playerState={playerState} 
-          setPlayerState={setPlayerState} 
-          changeScreen={changeScreen} 
-        />
-      </div>
+        {currentScreen === AppScreen.GACHA && (
+          <GachaScreen 
+            playerState={playerState} 
+            setPlayerState={setPlayerState} 
+            changeScreen={changeScreen} 
+          />
+        )}
 
-      <div className={currentScreen === AppScreen.DECK ? 'w-full h-full' : 'hidden'}>
-        <DeckScreen 
-          playerState={playerState} 
-          setPlayerState={setPlayerState} 
-          changeScreen={changeScreen} 
-        />
-      </div>
+        {currentScreen === AppScreen.DECK && (
+          <DeckScreen 
+            playerState={playerState} 
+            setPlayerState={setPlayerState} 
+            changeScreen={changeScreen} 
+          />
+        )}
 
-      <div className={currentScreen === AppScreen.BATTLE ? 'w-full h-full' : 'hidden'}>
-        <BattleScreen 
-          playerState={playerState} 
-          setPlayerState={setPlayerState} 
-          changeScreen={changeScreen} 
-        />
-      </div>
+        {currentScreen === AppScreen.BATTLE && (
+          <BattleScreen 
+            playerState={playerState} 
+            setPlayerState={setPlayerState} 
+            changeScreen={changeScreen} 
+          />
+        )}
 
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 };
 

@@ -2,8 +2,6 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { BannerData, ElementType, Rarity, SkillType, Skill } from '../types';
 import { getRandomAnimeImage } from '../utils/animeImageApi';
 
-const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
 const cleanJSON = (text: string) => {
   let cleanText = text.trim();
   if (cleanText.startsWith('```json')) cleanText = cleanText.substring(7);

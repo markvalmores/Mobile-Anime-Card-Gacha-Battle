@@ -8,6 +8,16 @@ interface TopBarProps {
 }
 
 export const TopBar: React.FC<TopBarProps> = ({ playerState, onBack, title }) => {
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch((err) => {
+        console.error(`Error attempting to enable full-screen mode: ${err.message}`);
+      });
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
   return (
     <div className="absolute top-0 left-0 w-full p-2 sm:p-4 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent z-50">
       <div className="flex items-center gap-2 sm:gap-4">
@@ -24,6 +34,15 @@ export const TopBar: React.FC<TopBarProps> = ({ playerState, onBack, title }) =>
         <h1 className="text-lg sm:text-2xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-purple-500 uppercase truncate max-w-[120px] sm:max-w-none">
           {title}
         </h1>
+        <button 
+          onClick={toggleFullscreen}
+          className="text-white hover:text-gray-300 bg-white/10 p-1 sm:p-2 rounded-full backdrop-blur-sm transition ml-2"
+          title="Toggle Fullscreen"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+          </svg>
+        </button>
       </div>
 
       <div className="flex items-center gap-2 sm:gap-6 bg-black/50 px-3 sm:px-6 py-1 sm:py-2 rounded-full border border-white/10 backdrop-blur-md">

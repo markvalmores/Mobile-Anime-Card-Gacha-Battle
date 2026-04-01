@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AppScreen, BannerData, CardData, PlayerState, Rarity, ElementType } from '../types';
 import { TopBar } from '../components/ui/TopBar';
 import { Button } from '../components/ui/Button';
@@ -18,9 +18,19 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ playerState, setPlayer
   const [pullResults, setPullResults] = useState<CardData[] | null>(null);
   const [isRolling, setIsRolling] = useState(false);
   const [bgUrl, setBgUrl] = useState('');
+  const isMounted = useRef(true);
 
   useEffect(() => {
-    fetchAnimeWallpaper().then(setBgUrl);
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    fetchAnimeWallpaper().then(url => {
+      if (isMounted.current) setBgUrl(url);
+    });
 
     const initBanner = () => {
       const today = new Date().toISOString().split('T')[0];
@@ -31,7 +41,7 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ playerState, setPlayer
           const parsed = JSON.parse(storedBanner);
           // Safely check if the stored banner is valid
           if (parsed && parsed.date === today && Array.isArray(parsed.featuredCards) && parsed.featuredCards.length > 0) {
-            setBanner(parsed);
+            if (isMounted.current) setBanner(parsed);
             return;
           }
         } catch (e) {
@@ -49,11 +59,12 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ playerState, setPlayer
           { name: fallbackName2, rarity: Rarity.SSR, element: ElementType.WATER, description: generateProceduralDescription(ElementType.WATER, fallbackName2), hp: 6000, maxHp: 6000, attack: 400, defense: 200, imageUrl: FALLBACK_IMAGES[1], skills: generateProceduralSkills(ElementType.WATER, fallbackName2) }
         ]
       };
-      setBanner(fallback);
+      if (isMounted.current) setBanner(fallback);
 
       // Immediately spin up a background thread to fetch real anime images for the fallback characters
       getRandomAnimeImage(fallbackName1).then(img1 => {
         getRandomAnimeImage(fallbackName2).then(img2 => {
+           if (!isMounted.current) return;
            setBanner(prev => {
               if (!prev || !prev.featuredCards || !prev.featuredCards[0] || prev.featuredCards[0].name !== fallbackName1) return prev;
               return {
@@ -69,6 +80,7 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ playerState, setPlayer
 
       // Async fetch full generative AI banner without blocking UI
       fetchDailyBanner().then(newBanner => {
+         if (!isMounted.current) return;
          if (newBanner && newBanner.featuredCards && newBanner.featuredCards.length > 0) {
             setBanner(newBanner);
             localStorage.setItem('dailyBanner', JSON.stringify(newBanner));

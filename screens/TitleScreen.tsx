@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import { Button } from '../components/ui/Button';
 import { fetchAnimeWallpaper } from '../utils/animeImageApi';
 
 interface TitleScreenProps {

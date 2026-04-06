@@ -21,8 +21,8 @@ export const Card: React.FC<CardProps> = ({ card, size = 'md', onClick, classNam
   };
 
   const sizes = {
-    sm: 'w-20 h-30 sm:w-24 sm:h-36 text-[10px] sm:text-xs',
-    md: 'w-28 h-42 sm:w-48 sm:h-72 text-[10px] sm:text-sm',
+    sm: 'w-20 h-32 sm:w-24 sm:h-36 text-[10px] sm:text-xs',
+    md: 'w-28 h-40 sm:w-48 sm:h-72 text-[10px] sm:text-sm',
     lg: 'w-32 h-48 sm:w-64 sm:h-96 text-xs sm:text-base'
   };
 

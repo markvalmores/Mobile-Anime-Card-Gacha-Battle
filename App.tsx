@@ -1,4 +1,5 @@
 import React, { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
+import { AnimatePresence, motion } from 'motion/react';
 import { AppScreen, PlayerState } from './types';
 import { TitleScreen } from './screens/TitleScreen';
 import { HomeScreen } from './screens/HomeScreen';
@@ -101,11 +102,19 @@ const App: React.FC = () => {
     const handleError = (event: ErrorEvent) => {
       console.error("Uncaught error:", event.error);
     };
+    const handleRejection = (event: PromiseRejectionEvent) => {
+      console.error("Unhandled promise rejection:", event.reason);
+    };
     window.addEventListener('error', handleError);
-    return () => window.removeEventListener('error', handleError);
+    window.addEventListener('unhandledrejection', handleRejection);
+    return () => {
+      window.removeEventListener('error', handleError);
+      window.removeEventListener('unhandledrejection', handleRejection);
+    };
   }, []);
 
   const changeScreen = (screen: AppScreen) => {
+    console.log("Changing screen to:", screen);
     setCurrentScreen(screen);
     localStorage.setItem('currentScreen', screen);
   };
@@ -121,44 +130,51 @@ const App: React.FC = () => {
 
   console.log("Rendering App with currentScreen:", currentScreen);
 
-  if (!isLoaded) return <div className="bg-black w-screen h-screen"></div>;
+  if (!isLoaded) return <div className="bg-black w-screen h-screen flex items-center justify-center text-blue-500 font-mono animate-pulse">LOADING MULTIVERSE...</div>;
+
+  const renderScreen = () => {
+    switch (currentScreen) {
+      case AppScreen.TITLE:
+        return <TitleScreen onStart={() => changeScreen(AppScreen.HOME)} />;
+      case AppScreen.HOME:
+        return <HomeScreen playerState={playerState} changeScreen={changeScreen} resetToTitle={resetToTitle} />;
+      case AppScreen.GACHA:
+        return <GachaScreen playerState={playerState} setPlayerState={setPlayerState} changeScreen={changeScreen} />;
+      case AppScreen.DECK:
+        return <DeckScreen playerState={playerState} setPlayerState={setPlayerState} changeScreen={changeScreen} />;
+      case AppScreen.BATTLE:
+        return <BattleScreen playerState={playerState} setPlayerState={setPlayerState} changeScreen={changeScreen} />;
+      default:
+        return (
+          <div className="w-full h-full flex flex-col items-center justify-center bg-slate-900 p-8 text-center">
+            <h2 className="text-2xl font-bold mb-4">Screen Anomaly Detected</h2>
+            <p className="text-gray-400 mb-6">The multiverse lost track of your location.</p>
+            <button 
+              onClick={resetToTitle}
+              className="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-full font-bold transition-all"
+            >
+              Return to Title
+            </button>
+          </div>
+        );
+    }
+  };
 
   return (
     <ErrorBoundary>
       <div className="w-full h-full font-sans antialiased text-white overflow-hidden bg-black selection:bg-blue-500/30">
-        
-        {currentScreen === AppScreen.TITLE && (
-          <TitleScreen onStart={() => changeScreen(AppScreen.HOME)} />
-        )}
-        
-        {currentScreen === AppScreen.HOME && (
-          <HomeScreen playerState={playerState} changeScreen={changeScreen} resetToTitle={resetToTitle} />
-        )}
-
-        {currentScreen === AppScreen.GACHA && (
-          <GachaScreen 
-            playerState={playerState} 
-            setPlayerState={setPlayerState} 
-            changeScreen={changeScreen} 
-          />
-        )}
-
-        {currentScreen === AppScreen.DECK && (
-          <DeckScreen 
-            playerState={playerState} 
-            setPlayerState={setPlayerState} 
-            changeScreen={changeScreen} 
-          />
-        )}
-
-        {currentScreen === AppScreen.BATTLE && (
-          <BattleScreen 
-            playerState={playerState} 
-            setPlayerState={setPlayerState} 
-            changeScreen={changeScreen} 
-          />
-        )}
-
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentScreen}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.02 }}
+            transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="w-full h-full"
+          >
+            {renderScreen()}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </ErrorBoundary>
   );

@@ -181,6 +181,8 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ playerState, setPlayer
 
       // Almost instant due to background object pool cache
       const uniqueProfiles = await generateCardProfiles(elementsToGenerate.length, elementsToGenerate);
+      if (!isMounted.current) return;
+      
       let profileIdx = 0;
 
       const newCards: CardData[] = await Promise.all(
@@ -205,6 +207,8 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ playerState, setPlayer
         })
       );
 
+      if (!isMounted.current) return;
+
       setPlayerState(prev => ({
         ...prev,
         credits: prev.credits - cost,
@@ -215,9 +219,13 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ playerState, setPlayer
       setPullResults(newCards);
     } catch (err) {
       console.error("Gacha pull encountered an error:", err);
-      alert("There was a connection glitch summoning from the void. Please try again.");
+      if (isMounted.current) {
+        alert("There was a connection glitch summoning from the void. Please try again.");
+      }
     } finally {
-      setIsRolling(false);
+      if (isMounted.current) {
+        setIsRolling(false);
+      }
     }
   };
 

@@ -8,11 +8,18 @@ interface TitleScreenProps {
 export const TitleScreen: React.FC<TitleScreenProps> = ({ onStart }) => {
   const [mounted, setMounted] = useState(false);
   const [bgUrl, setBgUrl] = useState('');
+  const isMounted = React.useRef(true);
 
   useEffect(() => {
+    isMounted.current = true;
     console.log("TitleScreen mounted");
     setMounted(true);
-    fetchAnimeWallpaper().then(setBgUrl);
+    fetchAnimeWallpaper().then(url => {
+      if (isMounted.current) setBgUrl(url);
+    });
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
   return (

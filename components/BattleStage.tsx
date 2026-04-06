@@ -9,9 +9,19 @@ interface BattleStageProps {
 
 export const BattleStage: React.FC<BattleStageProps> = ({ children, theme }) => {
   const [bgUrl, setBgUrl] = useState('');
+  const isMounted = React.useRef(true);
 
   useEffect(() => {
-    fetchAnimeWallpaper().then(setBgUrl);
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    fetchAnimeWallpaper().then(url => {
+      if (isMounted.current) setBgUrl(url);
+    });
   }, [theme]);
 
   const themeColors = {
@@ -49,7 +59,7 @@ export const BattleStage: React.FC<BattleStageProps> = ({ children, theme }) => 
         <div className="absolute bottom-[20%] w-full h-1 bg-white/20 blur-sm animate-pulse"></div>
 
         {/* Actors layer (Cards) - Re-enable pointer events for UI interaction */}
-        <div className="relative z-10 w-full max-w-5xl flex flex-col-reverse sm:flex-row justify-between items-center px-4 sm:px-12 pb-20 sm:pb-40 pointer-events-auto gap-8 sm:gap-0">
+        <div className="relative z-10 w-full max-w-5xl flex flex-col-reverse sm:flex-row justify-between items-center px-4 sm:px-12 pb-[15vh] sm:pb-[20vh] pointer-events-auto gap-8 sm:gap-0">
           {children}
         </div>
       </div>

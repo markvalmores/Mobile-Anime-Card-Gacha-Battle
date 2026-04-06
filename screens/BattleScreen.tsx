@@ -142,25 +142,32 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ playerState, setPlay
   }, [playerState.level]);
 
   const startGame = async (selectedCard: CardData) => {
-    const enemy = await generateEnemyAsync();
-    const readyCard = ensureSkills(selectedCard);
-    
-    setPlayerCard({ 
-      ...readyCard, 
-      currentHp: readyCard.hp, 
-      shield: 0,
-      isGuarding: false,
-      cooldowns: { [SkillType.BASIC]: 0, [SkillType.HEAVY]: 0, [SkillType.DEFEND]: 0, [SkillType.ULTIMATE]: 0 }
-    });
-    setEnemyCard(enemy);
-    setCombatLog(["Battle Initiated! Elements dictate advantage."]);
-    setPhase('FIGHT');
-    setTurn('PLAYER');
-    
-    setVsFlashing(true);
-    setTimeout(() => {
-      setVsFlashing(false);
-    }, 800);
+    try {
+      const enemy = await generateEnemyAsync();
+      if (!isMounted.current) return;
+      
+      const readyCard = ensureSkills(selectedCard);
+      
+      setPlayerCard({ 
+        ...readyCard, 
+        currentHp: readyCard.hp, 
+        shield: 0,
+        isGuarding: false,
+        cooldowns: { [SkillType.BASIC]: 0, [SkillType.HEAVY]: 0, [SkillType.DEFEND]: 0, [SkillType.ULTIMATE]: 0 }
+      });
+      setEnemyCard(enemy);
+      setCombatLog(["Battle Initiated! Elements dictate advantage."]);
+      setPhase('FIGHT');
+      setTurn('PLAYER');
+      
+      setVsFlashing(true);
+      setTimeout(() => {
+        if (isMounted.current) setVsFlashing(false);
+      }, 800);
+    } catch (error) {
+      console.error("Failed to start battle:", error);
+      alert("Multiverse connection error. Please try again.");
+    }
   };
 
   const getElementalMultiplier = (atkEl: ElementType, defEl: ElementType) => {
@@ -483,24 +490,24 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ playerState, setPlay
   const HealthBar = ({ current, max, shield, isGuarding, name, element }: { current: number, max: number, shield: number, isGuarding: boolean, name: string, element: ElementType }) => {
     const hpPercent = Math.max(0, (current / max) * 100);
     return (
-      <div className="w-48 sm:w-64 bg-black/80 p-2 rounded border border-white/20 backdrop-blur-sm shadow-xl transform-gpu will-change-transform">
-        <div className="flex justify-between text-xs font-bold mb-1">
+      <div className="w-40 sm:w-64 bg-black/80 p-1.5 sm:p-2 rounded border border-white/20 backdrop-blur-sm shadow-xl transform-gpu will-change-transform">
+        <div className="flex justify-between text-[10px] sm:text-xs font-bold mb-1">
           <span className="truncate pr-2 flex items-center gap-1">
-            <span className="bg-slate-700 px-1 rounded text-[10px] tracking-widest">{element}</span> {name}
+            <span className="bg-slate-700 px-1 rounded text-[8px] sm:text-[10px] tracking-widest">{element}</span> {name}
           </span>
           <span className="shrink-0">{current} / {max}</span>
         </div>
-        <div className="relative h-4 bg-gray-800 rounded overflow-hidden transform-gpu">
+        <div className="relative h-3 sm:h-4 bg-gray-800 rounded overflow-hidden transform-gpu">
           <div className={`absolute top-0 left-0 h-full transition-all duration-300 transform-gpu ${hpPercent > 50 ? 'bg-green-500' : hpPercent > 20 ? 'bg-yellow-500' : 'bg-red-500'}`} style={{ width: `${hpPercent}%` }}></div>
         </div>
-        <div className="flex justify-between mt-1 h-4">
+        <div className="flex justify-between mt-1 h-3 sm:h-4">
           {shield > 0 ? (
-            <div className="text-xs text-blue-300 font-bold flex items-center gap-1">
+            <div className="text-[10px] sm:text-xs text-blue-300 font-bold flex items-center gap-1">
               🛡️ {shield}
             </div>
           ) : <div></div>}
           {isGuarding && (
-            <div className="text-xs text-purple-300 font-bold flex items-center gap-1 animate-pulse transform-gpu">
+            <div className="text-[10px] sm:text-xs text-purple-300 font-bold flex items-center gap-1 animate-pulse transform-gpu">
               ⚔️ GUARDING
             </div>
           )}
@@ -533,7 +540,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ playerState, setPlay
                <Button onClick={() => changeScreen(AppScreen.GACHA)}>Go to Summon</Button>
              </div>
            ) : (
-             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-6">
                 {playerState.inventory.filter(c => filter === 'ALL' || c.rarity === filter).map(card => (
                   <div key={card.id} onClick={() => startGame(card)} className="transform hover:scale-105 transition cursor-pointer transform-gpu">
                     <Card card={ensureSkills(card)} size="sm" />
@@ -551,7 +558,7 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ playerState, setPlay
       <BattleStage theme={stageTheme}>
         
         {/* Player Side */}
-        <div className={`flex flex-col items-center gap-4 transition-transform duration-200 transform-gpu will-change-transform ${turn === 'PLAYER' && !isAnimating ? 'scale-110' : 'scale-100 opacity-80'}`}>
+        <div className={`flex flex-col items-center gap-2 sm:gap-4 transition-transform duration-200 transform-gpu will-change-transform ${turn === 'PLAYER' && !isAnimating ? 'scale-105 sm:scale-110' : 'scale-100 opacity-80'}`}>
           <HealthBar 
             current={playerCard?.currentHp || 0} 
             max={playerCard?.maxHp || 1} 
@@ -576,12 +583,12 @@ export const BattleScreen: React.FC<BattleScreenProps> = ({ playerState, setPlay
           </div>
         </div>
 
-        <div className={`text-4xl sm:text-6xl font-black italic mix-blend-overlay pointer-events-none transition-all transform-gpu will-change-transform ${vsFlashing ? 'animate-[flashVS_0.8s_ease-out_forwards] z-50' : 'text-white/50 animate-pulse'}`}>
+        <div className={`text-2xl sm:text-6xl font-black italic mix-blend-overlay pointer-events-none transition-all transform-gpu will-change-transform ${vsFlashing ? 'animate-[flashVS_0.8s_ease-out_forwards] z-50' : 'text-white/50 animate-pulse'}`}>
           VS
         </div>
 
         {/* Enemy Side */}
-        <div className={`flex flex-col items-center gap-4 transition-transform duration-200 transform-gpu will-change-transform ${turn === 'ENEMY' && !isAnimating ? 'scale-110' : 'scale-100 opacity-80'}`}>
+        <div className={`flex flex-col items-center gap-2 sm:gap-4 transition-transform duration-200 transform-gpu will-change-transform ${turn === 'ENEMY' && !isAnimating ? 'scale-105 sm:scale-110' : 'scale-100 opacity-80'}`}>
           <HealthBar 
             current={enemyCard?.currentHp || 0} 
             max={enemyCard?.maxHp || 1} 

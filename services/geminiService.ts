@@ -18,7 +18,13 @@ let isFillingPool = false;
 export const preloadAIProfiles = async () => {
   if (isFillingPool || profilePool.length > 15) return;
   isFillingPool = true;
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+  if (!apiKey) {
+    console.warn("No Gemini API key found in environment.");
+    isFillingPool = false;
+    return;
+  }
+  const ai = new GoogleGenAI({ apiKey });
   
   const prompt = `Generate exactly 5 unique anime character profiles with random elements (Fire, Water, Earth, Light, Dark). 
   For each character:
@@ -139,7 +145,9 @@ export interface CardProfile {
 }
 
 export const generateVictoryImage = async (name: string, element: ElementType, currentHp: number): Promise<string | null> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+  if (!apiKey) return null;
+  const ai = new GoogleGenAI({ apiKey });
   const prompt = `Anime style trading card of a victorious ${element} warrior named ${name}. The image should look like an epic celebratory end-of-battle screen. Include glowing text overlay clearly showing "VICTORY" and "${currentHp} HP". High quality, digital art, masterpiece.`;
 
   try {
@@ -162,7 +170,9 @@ export const generateVictoryImage = async (name: string, element: ElementType, c
 };
 
 export const fetchDailyBanner = async (): Promise<BannerData | null> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.GEMINI_API_KEY || process.env.API_KEY;
+  if (!apiKey) return null;
+  const ai = new GoogleGenAI({ apiKey });
   const today = new Date().toISOString().split('T')[0];
 
   const prompt = `

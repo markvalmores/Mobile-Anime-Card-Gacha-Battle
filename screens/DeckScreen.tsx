@@ -21,6 +21,14 @@ export const DeckScreen: React.FC<DeckScreenProps> = ({ playerState, setPlayerSt
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [bgUrl, setBgUrl] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (selectedCard) {
@@ -32,7 +40,9 @@ export const DeckScreen: React.FC<DeckScreenProps> = ({ playerState, setPlayerSt
   }, [playerState, selectedCard]);
 
   useEffect(() => {
-    fetchAnimeWallpaper().then(setBgUrl);
+    fetchAnimeWallpaper().then(url => {
+      if (isMounted.current) setBgUrl(url);
+    });
   }, []);
 
   const getImportRarity = (): Rarity => {
@@ -71,6 +81,8 @@ export const DeckScreen: React.FC<DeckScreenProps> = ({ playerState, setPlayerSt
 
       // Instant fetch via background object pool
       const profiles = await generateCardProfiles(1, [element]);
+      if (!isMounted.current) return;
+      
       const profile = profiles[0];
       const fallbackName = `Imported ${file.name.split('.')[0].substring(0, 10)}`;
 
@@ -174,7 +186,7 @@ export const DeckScreen: React.FC<DeckScreenProps> = ({ playerState, setPlayerSt
               [ NO WARRIORS IN CRYOSLEEP ]
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 transform-gpu">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-6 transform-gpu">
               {filteredInventory.map(card => (
                 <div key={card.id} className="animate-[scaleIn_0.3s_ease-out] transform-gpu">
                    <Card 

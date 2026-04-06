@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { AppScreen, PlayerState } from '../types';
 import { Button } from '../components/ui/Button';
 import { TopBar } from '../components/ui/TopBar';
@@ -17,6 +17,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ playerState, changeScree
   const [isBuilding, setIsBuilding] = useState(false);
   const [buildStep, setBuildStep] = useState('');
   const [showExportModal, setShowExportModal] = useState(false);
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     Promise.all([
@@ -25,7 +33,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ playerState, changeScree
       fetchAnimeThumbnail(),
       fetchAnimeThumbnail()
     ]).then(([bg, battle, gacha, deck]) => {
-      setImages({ bg, battle, gacha, deck });
+      if (isMounted.current) {
+        setImages({ bg, battle, gacha, deck });
+      }
     });
   }, []);
 
@@ -49,11 +59,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ playerState, changeScree
     ];
 
     for (const step of steps) {
+      if (!isMounted.current) return;
       setBuildStep(step);
       await new Promise(r => setTimeout(r, 500));
     }
 
     try {
+      if (!isMounted.current) return;
       // @ts-ignore (JSZip is loaded from CDN in index.html)
       const zip = new JSZip();
       

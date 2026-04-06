@@ -15,10 +15,13 @@ export const getRandomAnimeImage = async (seed?: string): Promise<string> => {
     const res = await fetch(endpoint, { signal: controller.signal });
     clearTimeout(timeoutId);
     
-    const data = await res.json();
-    
-    if (data.url) return data.url;
-    if (data.results && data.results[0].url) return data.results[0].url;
+    try {
+      const data = await res.json();
+      if (data.url) return data.url;
+      if (data.results && data.results[0].url) return data.results[0].url;
+    } catch (e) {
+      console.warn("Failed to parse JSON from anime API", e);
+    }
   } catch (e) {
     console.warn("Anime API fetch slow/failed, using instant fallback...", e);
   }

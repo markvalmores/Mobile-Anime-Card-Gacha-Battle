@@ -142,6 +142,7 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ playerState, setPlayer
   };
 
   const handlePull = async (times: number) => {
+    console.log(`Starting pull: ${times}x`);
     const cost = times === 1 ? GACHA_COST_SINGLE : GACHA_COST_TEN;
     if (playerState.credits < cost) {
       alert("Not enough credits!");
@@ -179,13 +180,14 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ playerState, setPlayer
         }
       }
 
-      // Almost instant due to background object pool cache
+      console.log(`Generating ${elementsToGenerate.length} profiles...`);
       const uniqueProfiles = await generateCardProfiles(elementsToGenerate.length, elementsToGenerate);
       if (!isMounted.current) return;
       
       let profileIdx = 0;
 
-      const newCards: CardData[] = await Promise.all(
+      console.log(`Fetching ${baseCards.length} images...`);
+      const results = await Promise.allSettled(
         baseCards.map(async (c) => {
           if (c.name) {
              return c as CardData;
@@ -207,6 +209,24 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ playerState, setPlayer
         })
       );
 
+      const newCards: CardData[] = results.map((res, idx) => {
+        if (res.status === 'fulfilled') {
+          return res.value;
+        } else {
+          console.error(`Failed to fetch image for card ${idx}:`, res.reason);
+          // Populate missing fields with defaults
+          const c = baseCards[idx];
+          return { 
+            ...c, 
+            name: c.name || "Unknown Warrior",
+            description: c.description || "A mysterious warrior summoned from the void.",
+            skills: c.skills || [],
+            imageUrl: FALLBACK_IMAGES[0] 
+          } as CardData;
+        }
+      });
+
+      console.log("Pull complete, setting results.");
       if (!isMounted.current) return;
 
       setPlayerState(prev => ({
@@ -223,6 +243,7 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ playerState, setPlayer
         alert("There was a connection glitch summoning from the void. Please try again.");
       }
     } finally {
+      console.log("Pull finally block.");
       if (isMounted.current) {
         setIsRolling(false);
       }

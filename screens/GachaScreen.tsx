@@ -83,7 +83,11 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ playerState, setPlayer
          if (!isMounted.current) return;
          if (newBanner && newBanner.featuredCards && newBanner.featuredCards.length > 0) {
             setBanner(newBanner);
-            localStorage.setItem('dailyBanner', JSON.stringify(newBanner));
+            try {
+              localStorage.setItem('dailyBanner', JSON.stringify(newBanner));
+            } catch (e) {
+              console.error("Failed to save dailyBanner", e);
+            }
          }
       });
     };
@@ -187,44 +191,38 @@ export const GachaScreen: React.FC<GachaScreenProps> = ({ playerState, setPlayer
       let profileIdx = 0;
 
       console.log(`Fetching ${baseCards.length} images...`);
-      const results = await Promise.allSettled(
-        baseCards.map(async (c) => {
-          if (c.name) {
-             return c as CardData;
+      const newCards: CardData[] = await Promise.all(
+        baseCards.map(async (c, idx) => {
+          try {
+            if (c.name) {
+               return c as CardData;
+            }
+            
+            const profile = uniqueProfiles[profileIdx++];
+            const finalName = profile?.name || generateProceduralName();
+            const finalDescription = profile?.description || generateProceduralDescription(c.element as ElementType, finalName);
+            const finalSkills = profile?.skills || generateProceduralSkills(c.element as ElementType, finalName);
+            const imageUrl = await getRandomAnimeImage(finalName + c.id);
+            
+            return { 
+              ...c, 
+              name: finalName, 
+              description: finalDescription, 
+              skills: finalSkills, 
+              imageUrl 
+            } as CardData;
+          } catch (err) {
+            console.error(`Failed to fetch image for card ${idx}:`, err);
+            return { 
+              ...c, 
+              name: c.name || "Unknown Warrior",
+              description: c.description || "A mysterious warrior summoned from the void.",
+              skills: c.skills || [],
+              imageUrl: FALLBACK_IMAGES[0] 
+            } as CardData;
           }
-          
-          const profile = uniqueProfiles[profileIdx++];
-          const finalName = profile?.name || generateProceduralName();
-          const finalDescription = profile?.description || generateProceduralDescription(c.element as ElementType, finalName);
-          const finalSkills = profile?.skills || generateProceduralSkills(c.element as ElementType, finalName);
-          const imageUrl = await getRandomAnimeImage(finalName + c.id);
-          
-          return { 
-            ...c, 
-            name: finalName, 
-            description: finalDescription, 
-            skills: finalSkills, 
-            imageUrl 
-          } as CardData;
         })
       );
-
-      const newCards: CardData[] = results.map((res, idx) => {
-        if (res.status === 'fulfilled') {
-          return res.value;
-        } else {
-          console.error(`Failed to fetch image for card ${idx}:`, res.reason);
-          // Populate missing fields with defaults
-          const c = baseCards[idx];
-          return { 
-            ...c, 
-            name: c.name || "Unknown Warrior",
-            description: c.description || "A mysterious warrior summoned from the void.",
-            skills: c.skills || [],
-            imageUrl: FALLBACK_IMAGES[0] 
-          } as CardData;
-        }
-      });
 
       console.log("Pull complete, setting results.");
       if (!isMounted.current) return;

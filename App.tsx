@@ -70,30 +70,38 @@ const App: React.FC = () => {
 
   // Load state from local storage on mount
   useEffect(() => {
-    const saved = localStorage.getItem('playerState');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setPlayerState(prev => ({
-          credits: typeof parsed.credits === 'number' ? parsed.credits : prev.credits,
-          pityCount: typeof parsed.pityCount === 'number' ? parsed.pityCount : prev.pityCount,
-          inventory: Array.isArray(parsed.inventory) ? parsed.inventory : prev.inventory,
-          level: typeof parsed.level === 'number' ? parsed.level : prev.level,
-          exp: typeof parsed.exp === 'number' ? parsed.exp : prev.exp
-        }));
-      } catch (e) {
-        console.error("Failed to parse saved state");
+    try {
+      const saved = localStorage.getItem('playerState');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          setPlayerState(prev => ({
+            credits: typeof parsed.credits === 'number' ? parsed.credits : prev.credits,
+            pityCount: typeof parsed.pityCount === 'number' ? parsed.pityCount : prev.pityCount,
+            inventory: Array.isArray(parsed.inventory) ? parsed.inventory : prev.inventory,
+            level: typeof parsed.level === 'number' ? parsed.level : prev.level,
+            exp: typeof parsed.exp === 'number' ? parsed.exp : prev.exp
+          }));
+        } catch (e) {
+          console.error("Failed to parse saved state");
+        }
       }
+      localStorage.removeItem('currentScreen');
+    } catch (e) {
+      console.error("Failed to access localStorage on mount", e);
     }
     setIsLoaded(true);
     setCurrentScreen(AppScreen.TITLE);
-    localStorage.removeItem('currentScreen');
   }, []);
 
   // Save state whenever it changes
   useEffect(() => {
     if (isLoaded) {
-      localStorage.setItem('playerState', JSON.stringify(playerState));
+      try {
+        localStorage.setItem('playerState', JSON.stringify(playerState));
+      } catch (e) {
+        console.error("Failed to save state to localStorage", e);
+      }
     }
   }, [playerState, isLoaded]);
 
@@ -116,7 +124,11 @@ const App: React.FC = () => {
   const changeScreen = (screen: AppScreen) => {
     console.log("Changing screen to:", screen);
     setCurrentScreen(screen);
-    localStorage.setItem('currentScreen', screen);
+    try {
+      localStorage.setItem('currentScreen', screen);
+    } catch (e) {
+      console.error("Failed to save currentScreen", e);
+    }
   };
 
   const resetToTitle = () => {
